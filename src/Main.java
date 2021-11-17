@@ -39,7 +39,38 @@ public class Main {
             users[i] = new user(init_station);
             System.out.println(users[i].Current_station.Station_name);
         }
+        Member[][] members = new Member[281][281];
+        PreparedStatement statement = connection.prepareStatement("SELECT * FROM station_distance");
+        ResultSet resultSet = statement.executeQuery();
+        Station_info Pivot = null, Changes = null;
+        for(int i=0; i<281; i++) {
+            Pivot = stations[i];            //인덱스로 접근해서 역 정보 할당
+            for(int k=0; k<281; k++) {
+                Changes = stations[k];
+                Find_dist(resultSet, members, Changes, Pivot,i, k);
+            }
+        }
+
+        for(int i=0; i<281; i++) {
+            for(int k=0; k<281; k++) {
+                System.out.print(members[i][k].dist + " ");
+                if(k == 70 || k == 140)
+                    System.out.println();
+            }
+        }
     }
+    static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,int i, int k) throws SQLException{
+        // 전체 쿼리문에서 출발역, 도착역 이름으로 tuple 찾아서 환승값 추가
+
+        while(RS.next()) {
+            members[i][k] = new Member();
+            if(RS.getString(2).equals(Pivot.Station_name) && RS.getString(3).equals(Changes.Station_name)){
+                members[i][k].Line_info = Pivot.Line_Info;
+                members[i][k].dist = RS.getFloat(4);
+            }
+        }
+    }
+
     static void Station_Info_setter(Connection connection) throws SQLException {
         PreparedStatement TogetSize = connection.prepareStatement("SELECT count(*) FROM station_info");
         ResultSet Size =  TogetSize.executeQuery();
@@ -121,12 +152,18 @@ public class Main {
         System.out.println(":: Invalid station name :: ");
         return null;
     }
+    // getter
+    public Station_info[] getStations() {
+        return stations;
+    }
 
-    // 역간 이동에 대한 클래스. 호선정보, 출발역, 도착역, 거리, 종착역 여부를 정보로 갖는다.
-    // 역 정보 클래스. 역의 이름과 좌표값을 가진다.
-    //환승체크
-    // 출발지 검색
-    //
+    public static Station_distance[] getStation_distances() {
+        return station_distances;
+    }
+
+    public static Transfer_info[] getTransfer_infos() {
+        return transfer_infos;
+    }
 }
 
 class Station_distance {
@@ -185,4 +222,27 @@ class user {
         Ways = new LinkedList<>();
     }
 }
+
+class Find {
+    Station_info user_station;
+    Queue<Station_info> way;
+    public Find(Station_info user_station) {
+        this.user_station = user_station;
+        way = new LinkedList<>();
+    }
+
+    /*public Queue<Station_info> Find_way(Station_info from, Station_info to) {
+
+    }*/
+}
+
+class Member {
+    String Line_info;
+    float dist;
+    public Member() {
+        Line_info = null;
+        dist = 0.0f;
+    }
+}
+
 

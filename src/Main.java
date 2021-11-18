@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.*;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -8,6 +9,7 @@ public class Main {
     static String url = "jdbc:mysql://localhost:3306/algorithm_termproject?useUnicode=true&characterEncoding=utf8";
     static String userName = "root";
     static String password = "12345";
+    static final int INF = 10000000;
     static int userNum;
     static user[] users;
     static Station_info[] stations;
@@ -40,35 +42,52 @@ public class Main {
             System.out.println(users[i].Current_station.Station_name);
         }
         Member[][] members = new Member[281][281];
+        String [][] lines = new String[281][281];
         PreparedStatement statement = connection.prepareStatement("SELECT * FROM station_distance");
         ResultSet resultSet = statement.executeQuery();
         Station_info Pivot = null, Changes = null;
         for(int i=0; i<281; i++) {
             Pivot = stations[i];            //인덱스로 접근해서 역 정보 할당
             for(int k=0; k<281; k++) {
+                members[i][k] = new Member();
                 Changes = stations[k];
-                Find_dist(resultSet, members, Changes, Pivot,i, k);
+                Find_dist(statement.executeQuery(), members, Pivot, Changes,i, k, lines);
             }
         }
 
-        for(int i=0; i<281; i++) {
+        /*for(int i=0; i<281; i++) {
             for(int k=0; k<281; k++) {
-                System.out.print(members[i][k].dist + " ");
+               if(members[i][k].dist == 0)
+                    System.out.print("INF" + " ");
+                else
+                    System.out.print(lines[i][k] + " ");
                 if(k == 70 || k == 140)
                     System.out.println();
             }
-        }
-    }
-    static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,int i, int k) throws SQLException{
-        // 전체 쿼리문에서 출발역, 도착역 이름으로 tuple 찾아서 환승값 추가
+        }*/
+        floydalgorithm(members, lines);
 
+    }
+    static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,
+                          int i, int k, String[][] lines) throws SQLException{
+        // 전체 쿼리문에서 출발역, 도착역 이름으로 tuple 찾아서 환승값 추가
+        lines[i][k] = "INF";
+        if(i == k) {
+            members[i][k].dist = 0;
+            return;
+        }
+        members[i][k].Line_info = "INF";
+        members[i][k].dist = INF;
         while(RS.next()) {
-            members[i][k] = new Member();
-            if(RS.getString(2).equals(Pivot.Station_name) && RS.getString(3).equals(Changes.Station_name)){
+            if((RS.getString(2).equals(Pivot.Station_name) && RS.getString(3).equals(Changes.Station_name)) ||
+                    (RS.getString(2).equals(Changes.Station_name)) && (RS.getString(3).equals(Pivot.Station_name))){
                 members[i][k].Line_info = Pivot.Line_Info;
                 members[i][k].dist = RS.getFloat(4);
+                lines[i][k] = Pivot.Line_Info;
             }
         }
+
+        //System.out.println(members[i][k].Line_info + " " + members[i][k].dist);
     }
 
     static void Station_Info_setter(Connection connection) throws SQLException {
@@ -140,6 +159,41 @@ public class Main {
             Transfer_line = resultSet.getString(3);
             Transfer_value = resultSet.getFloat(4);
             transfer_infos[iter++] = new Transfer_info(Line_info, Station_name, Transfer_line, Transfer_value);
+        }
+    }
+
+    static void floydalgorithm(Member[][] w, String[][] line_num) {
+        int maxnum = 281;
+        int tw = 1;
+        for(int k=0; k<maxnum; k++)
+        {
+            for(int i=0; i<maxnum; i++)
+            {
+                for(int j=0; j<maxnum; j++)
+                {
+                    if(w[i][j].dist>w[i][k].dist+w[k][j].dist+tw &&line_num[j][k].equals(line_num[i][j]))
+                        w[i][j].dist = w[i][k].dist + w[k][j].dist;
+                    else if(w[i][j].dist>w[i][k].dist+w[k][j].dist+tw/*역코드는 j*/&&!line_num[j][k].equals(line_num[i][j]))
+                        w[i][j].dist = w[i][k].dist+w[k][j].dist+tw;
+                }
+            }
+            if (k==maxnum-1) {
+                printmatrix(maxnum, w, line_num);
+            }
+        }
+    }
+
+    static void printmatrix(int maxnum, Member[][] w, String[][] line_num) {
+        for(int i=0; i<maxnum; i++) {
+            for(int j=0; j<maxnum; j++) {
+                if(w[i][j].dist == INF) {
+                    System.out.printf(" INF");
+                    continue;
+                }
+                else
+                    System.out.printf(" %3.1f",w[i][j].dist);
+            }
+            System.out.println();
         }
     }
 

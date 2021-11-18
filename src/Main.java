@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.*;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -46,10 +45,25 @@ public class Main {
         PreparedStatement statement = connection.prepareStatement("SELECT * FROM station_distance");
         ResultSet resultSet = statement.executeQuery();
         Station_info Pivot = null, Changes = null;
+
+        for(int i=0; i<281; i++) {
+            for(int k=0; k<281; k++) {
+                members[i][k] = new Member();
+                if(i == k)
+                    members[i][k].dist = 0;
+                else {
+                    members[i][k].Line_info = "INF";
+                    members[i][k].dist = INF;
+                }
+                lines[i][k] = "INF";
+            }
+        }
+
         for(int i=0; i<281; i++) {
             Pivot = stations[i];            //인덱스로 접근해서 역 정보 할당
             for(int k=0; k<281; k++) {
-                members[i][k] = new Member();
+                //members[i][k] = new Member();
+                //방향성이 없기 때문에 역으로도 저장이 되어야 한다. 따라서 초기화를 이렇게 따로따로 해주면 안된다.
                 Changes = stations[k];
                 Find_dist(statement.executeQuery(), members, Pivot, Changes,i, k, lines);
             }
@@ -57,10 +71,10 @@ public class Main {
 
         /*for(int i=0; i<281; i++) {
             for(int k=0; k<281; k++) {
-               if(members[i][k].dist == 0)
+               if(members[i][k].dist == INF)
                     System.out.print("INF" + " ");
                 else
-                    System.out.print(lines[i][k] + " ");
+                    System.out.print(members[i][k].dist + " ");
                 if(k == 70 || k == 140)
                     System.out.println();
             }
@@ -70,19 +84,19 @@ public class Main {
     }
     static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,
                           int i, int k, String[][] lines) throws SQLException{
+        String From, To;
+        float dist;
         // 전체 쿼리문에서 출발역, 도착역 이름으로 tuple 찾아서 환승값 추가
-        lines[i][k] = "INF";
-        if(i == k) {
-            members[i][k].dist = 0;
-            return;
-        }
-        members[i][k].Line_info = "INF";
-        members[i][k].dist = INF;
         while(RS.next()) {
-            if((RS.getString(2).equals(Pivot.Station_name) && RS.getString(3).equals(Changes.Station_name)) ||
-                    (RS.getString(2).equals(Changes.Station_name)) && (RS.getString(3).equals(Pivot.Station_name))){
+            From = RS.getString(2);
+            To = RS.getString(3);
+            dist = RS.getFloat(4);
+            if((From.equals(Pivot.Station_name) && To.equals(Changes.Station_name)) ||
+                    ((From.equals(Changes.Station_name)) && (To.equals(Pivot.Station_name)))){
                 members[i][k].Line_info = Pivot.Line_Info;
-                members[i][k].dist = RS.getFloat(4);
+                members[i][k].dist = dist;
+                members[k][i].Line_info = Pivot.Line_Info;
+                members[k][i].dist = dist;
                 lines[i][k] = Pivot.Line_Info;
             }
         }
@@ -164,17 +178,17 @@ public class Main {
 
     static void floydalgorithm(Member[][] w, String[][] line_num) {
         int maxnum = 281;
-        int tw = 1;
+        int tw = 0;
         for(int k=0; k<maxnum; k++)
         {
             for(int i=0; i<maxnum; i++)
             {
                 for(int j=0; j<maxnum; j++)
                 {
-                    if(w[i][j].dist>w[i][k].dist+w[k][j].dist+tw &&line_num[j][k].equals(line_num[i][j]))
+                    if(w[i][j].dist > w[i][k].dist + w[k][j].dist && line_num[j][k].equals(line_num[i][j]))
                         w[i][j].dist = w[i][k].dist + w[k][j].dist;
-                    else if(w[i][j].dist>w[i][k].dist+w[k][j].dist+tw/*역코드는 j*/&&!line_num[j][k].equals(line_num[i][j]))
-                        w[i][j].dist = w[i][k].dist+w[k][j].dist+tw;
+                    else if(w[i][j].dist > w[i][k].dist + w[k][j].dist + tw && !line_num[j][k].equals(line_num[i][j]))
+                        w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
                 }
             }
             if (k==maxnum-1) {

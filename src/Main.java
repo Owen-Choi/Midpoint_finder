@@ -191,12 +191,18 @@ public class Main {
                         w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
                 }
             }
-            if (k==maxnum-1) {
-                printmatrix(maxnum, w, line_num);
+        }
+        //printmatrix(maxnum, w, line_num);
+        print(w);
+    }
+    static void print(Member[][] w) {
+        for(int i=0; i<281; i++) {
+            for(int k=0; k<281; k++) {
+                System.out.println(stations[i].Station_name + " -> " + stations[k].Station_name +
+                        " : " + w[i][k].dist);
             }
         }
     }
-
     static void printmatrix(int maxnum, Member[][] w, String[][] line_num) {
         for(int i=0; i<maxnum; i++) {
             for(int j=0; j<maxnum; j++) {

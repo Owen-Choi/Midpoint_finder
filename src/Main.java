@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.*;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -14,6 +15,7 @@ public class Main {
     static Station_info[] stations;
     static Station_distance[] station_distances;
     static Transfer_info[] transfer_infos;
+    static float[] distance_sum;
     public static void main(String[] args) throws Exception {
         // mysql 서버와 연결. 이 connection을 통해 쿼리 보내고 결과 받음
         //Class.forName("com.mysql.jdbc.Driver");
@@ -42,6 +44,7 @@ public class Main {
         }
         Member[][] members = new Member[281][281];
         String [][] lines = new String[281][281];
+        distance_sum = new float[281];
         PreparedStatement statement = connection.prepareStatement("SELECT * FROM station_distance");
         ResultSet resultSet = statement.executeQuery();
         Station_info Pivot = null, Changes = null;
@@ -91,13 +94,20 @@ public class Main {
             From = RS.getString(2);
             To = RS.getString(3);
             dist = RS.getFloat(4);
-            if((From.equals(Pivot.Station_name) && To.equals(Changes.Station_name)) ||
+            if(Pivot.Station_name.equals(Changes.Station_name)) {
+                members[i][k].dist = 0;
+                members[k][i].dist = 0;
+                lines[i][k] = Pivot.Line_Info.substring(0,1);
+                break;
+            }
+            else if((From.equals(Pivot.Station_name) && To.equals(Changes.Station_name)) ||
                     ((From.equals(Changes.Station_name)) && (To.equals(Pivot.Station_name)))){
                 members[i][k].Line_info = Pivot.Line_Info;
                 members[i][k].dist = dist;
                 members[k][i].Line_info = Pivot.Line_Info;
                 members[k][i].dist = dist;
-                lines[i][k] = Pivot.Line_Info;
+                lines[i][k] = Pivot.Line_Info.substring(0,1);
+                break;
             }
         }
 
@@ -130,7 +140,7 @@ public class Main {
             cinema = resultSet.getBoolean(9);
             is_final = resultSet.getBoolean(10);
             stations[iter++] = new Station_info(tempLine, name, lat, lon, cafe,
-                    store, sum_around, dptstore, cinema, is_final);
+                    store, sum_around, dptstore, cinema, is_final, iter-1);
         }
     }
 
@@ -194,6 +204,8 @@ public class Main {
         }
         //printmatrix(maxnum, w, line_num);
         print(w);
+        // 이제 2차원 배열이 준비되었습니다.
+        calc_fair(w);
     }
     static void print(Member[][] w) {
         for(int i=0; i<281; i++) {
@@ -203,7 +215,7 @@ public class Main {
             }
         }
     }
-    static void printmatrix(int maxnum, Member[][] w, String[][] line_num) {
+    /*static void printmatrix(int maxnum, Member[][] w, String[][] line_num) {
         for(int i=0; i<maxnum; i++) {
             for(int j=0; j<maxnum; j++) {
                 if(w[i][j].dist == INF) {
@@ -214,6 +226,25 @@ public class Main {
                     System.out.printf(" %3.1f",w[i][j].dist);
             }
             System.out.println();
+        }
+    }*/
+
+    static void calc_fair(Member[][] members) {
+        int index = 0;
+        for(int i=0; i<281; i++) {
+            for(int k=0; k<userNum; k++) {
+                index = users[k].Current_station.station_num;
+                // 각 유저의 출발지로부터 한 역까지 걸리는 모든 가중치를 더한다.
+                distance_sum[i] += members[index][i].dist;
+            }
+        }
+        // 총합 값의 저장이 끝났으면 정렬 후 분산을 구한다.
+        // 먼저 정렬을 수행한다.
+        Arrays.sort(distance_sum);
+        // 그리고 (일단은) 상위 10개의 값 중에서 분산을 비교한다.
+        // (값 - 값들의 평균)^2의 평균
+        for(int i=0; i<10; i++) {
+
         }
     }
 
@@ -257,9 +288,10 @@ class Station_info {
     String Station_name;
     float lat, lon;
     int cafe, store, sum_around;
+    int station_num;
     boolean dptstore, cinema, Is_Final;
     public Station_info(String Line_Info, String Station_name, float x, float y, int cafe, int store,
-                        int sum_around, boolean dptstore, boolean cinema, boolean Is_Final) {
+                        int sum_around, boolean dptstore, boolean cinema, boolean Is_Final, int station_num) {
         this.Line_Info = Line_Info;
         this.Station_name = Station_name;
         this.lat = x;
@@ -270,6 +302,7 @@ class Station_info {
         this.dptstore = dptstore;
         this.cinema = cinema;
         this.Is_Final = Is_Final;
+        this.station_num = station_num;
     }
 }
 
@@ -316,6 +349,17 @@ class Member {
     public Member() {
         Line_info = null;
         dist = 0.0f;
+    }
+}
+
+class Sum {
+    // 유저의 리스트를 가지고 있어야 정렬 후 분산을 판단할 수 있습니다.
+    LinkedList<Member> user_list;
+    // 정렬은 이 dist_sum을 기준으로 이루어집니다.
+    float dist_sum;
+    public Sum(LinkedList<Member> user_list, float dist_sum) {
+        this.user_list  = user_list;
+        this.dist_sum = dist_sum;
     }
 }
 

@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.*;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -15,7 +16,7 @@ public class Main {
     static Station_info[] stations;
     static Station_distance[] station_distances;
     static Transfer_info[] transfer_infos;
-    static float[] distance_sum;
+    static Sum[] distance_sum;
     public static void main(String[] args) throws Exception {
         // mysql 서버와 연결. 이 connection을 통해 쿼리 보내고 결과 받음
         //Class.forName("com.mysql.jdbc.Driver");
@@ -44,7 +45,7 @@ public class Main {
         }
         Member[][] members = new Member[281][281];
         String [][] lines = new String[281][281];
-        distance_sum = new float[281];
+        distance_sum = new Sum[281];
         PreparedStatement statement = connection.prepareStatement("SELECT * FROM station_distance");
         ResultSet resultSet = statement.executeQuery();
         Station_info Pivot = null, Changes = null;
@@ -203,7 +204,7 @@ public class Main {
             }
         }
         //printmatrix(maxnum, w, line_num);
-        print(w);
+        //print(w);
         // 이제 2차원 배열이 준비되었습니다.
         calc_fair(w);
     }
@@ -231,20 +232,59 @@ public class Main {
 
     static void calc_fair(Member[][] members) {
         int index = 0;
+        float distSum;
+        int[] user_indexes = new int[userNum];
+        int[] user_dest_indexes = new int[userNum];
         for(int i=0; i<281; i++) {
+            distSum = 0;
             for(int k=0; k<userNum; k++) {
                 index = users[k].Current_station.station_num;
                 // 각 유저의 출발지로부터 한 역까지 걸리는 모든 가중치를 더한다.
-                distance_sum[i] += members[index][i].dist;
+                user_indexes[k] = index;
+                user_dest_indexes[k] = i;
+                distSum += members[index][i].dist;
             }
+            distance_sum[i] = new Sum(user_indexes, user_dest_indexes ,distSum);
         }
         // 총합 값의 저장이 끝났으면 정렬 후 분산을 구한다.
         // 먼저 정렬을 수행한다.
-        Arrays.sort(distance_sum);
+        Arrays.sort(distance_sum, new Comparator<Sum>() {
+            @Override
+            public int compare(Sum o1, Sum o2) {
+                if(o1.dist_sum < o2.dist_sum)
+                    return -1;
+                else
+                    return 1;
+            }
+        });
         // 그리고 (일단은) 상위 10개의 값 중에서 분산을 비교한다.
         // (값 - 값들의 평균)^2의 평균
+        float tempSum;
+        float tempAVG;
+        float min = INF;
+        float resultX, resultY;
+        resultX = resultY = 0;
         for(int i=0; i<10; i++) {
-
+            tempSum = 0;
+            tempAVG = 0;
+            for(int k=0; k<userNum; k++) {
+                tempSum += distance_sum[i].start_pos[k];
+            }
+            // 합을 구했으니 이를 바탕으로 평균을 구하고 나아가 분산을 구하겠습니다.
+            tempAVG = tempSum / userNum;
+            tempSum = 0;
+            for(int j=0; j<userNum; j++) {
+                tempSum += Math.pow
+                        (tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos[j]].dist,2);
+            }
+            tempAVG = tempSum/userNum;
+            // 분산을 구했습니다. 이 정보들을 최소값과 비교하고 저장해주겠습니다.
+            if(tempAVG < min) {
+                min = tempAVG;
+                resultX = stations[distance_sum[i].dest_pos[0]].lat;
+                resultY = stations[distance_sum[i].dest_pos[0]].lon;
+                System.out.println(resultX + " " + resultY);
+            }
         }
     }
 
@@ -323,25 +363,11 @@ class Transfer_info {
 class user {
     // 일단은 최초에 찾은 하나의 역만을 갖는다. 후에 문제가 생기면 리스트로 바꾸던가 해야겠다.
     Station_info Current_station;
-    Queue<Queue<Station_info>> Ways;
     public user(Station_info Current_station) {
         this.Current_station = Current_station;
-        Ways = new LinkedList<>();
     }
 }
 
-class Find {
-    Station_info user_station;
-    Queue<Station_info> way;
-    public Find(Station_info user_station) {
-        this.user_station = user_station;
-        way = new LinkedList<>();
-    }
-
-    /*public Queue<Station_info> Find_way(Station_info from, Station_info to) {
-
-    }*/
-}
 
 class Member {
     String Line_info;
@@ -354,12 +380,15 @@ class Member {
 
 class Sum {
     // 유저의 리스트를 가지고 있어야 정렬 후 분산을 판단할 수 있습니다.
-    LinkedList<Member> user_list;
+    // 정정 : 굳이 유저의 리스트가 아니더라도 int의 배열로 이를 똑같이 구현할 수 있습니다.
+    int[] start_pos;
+    int[] dest_pos;
     // 정렬은 이 dist_sum을 기준으로 이루어집니다.
     float dist_sum;
-    public Sum(LinkedList<Member> user_list, float dist_sum) {
-        this.user_list  = user_list;
+    public Sum(int[] start_pos, int[] dest_pos, float dist_sum) {
+        this.start_pos = start_pos;
         this.dist_sum = dist_sum;
+        this.dest_pos = dest_pos;
     }
 }
 

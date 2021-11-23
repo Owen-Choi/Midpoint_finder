@@ -233,18 +233,21 @@ public class Main {
     static void calc_fair(Member[][] members) {
         int index = 0;
         float distSum;
-        int[] user_indexes = new int[userNum];
-        int[] user_dest_indexes = new int[userNum];
+        int[] start_indexes = new int[userNum];
+        int dest_index = 0;
         for(int i=0; i<281; i++) {
             distSum = 0;
             for(int k=0; k<userNum; k++) {
                 index = users[k].Current_station.station_num;
                 // 각 유저의 출발지로부터 한 역까지 걸리는 모든 가중치를 더한다.
-                user_indexes[k] = index;
-                user_dest_indexes[k] = i;
+                // k번째 유저의 출발지는 index
+                start_indexes[k] = index;
+                // k번째 유저의 도착지는 i
+                dest_index = i;
                 distSum += members[index][i].dist;
             }
-            distance_sum[i] = new Sum(user_indexes, user_dest_indexes ,distSum);
+            // i역에 대해서 모든 유저들의 가중치 총 합을 저장.
+            distance_sum[i] = new Sum(start_indexes, dest_index, distSum);
         }
         // 총합 값의 저장이 끝났으면 정렬 후 분산을 구한다.
         // 먼저 정렬을 수행한다.
@@ -257,6 +260,7 @@ public class Main {
                     return 1;
             }
         });
+
         // 그리고 (일단은) 상위 10개의 값 중에서 분산을 비교한다.
         // (값 - 값들의 평균)^2의 평균
         float tempSum;
@@ -264,28 +268,31 @@ public class Main {
         float min = INF;
         float resultX, resultY;
         resultX = resultY = 0;
-        for(int i=0; i<10; i++) {
+        for(int i=0; i<50; i++) {
             tempSum = 0;
             tempAVG = 0;
             for(int k=0; k<userNum; k++) {
-                tempSum += distance_sum[i].start_pos[k];
+                tempSum += members[distance_sum[i].start_pos[k]][distance_sum[i].dest_pos].dist;
             }
             // 합을 구했으니 이를 바탕으로 평균을 구하고 나아가 분산을 구하겠습니다.
+            //
             tempAVG = tempSum / userNum;
             tempSum = 0;
             for(int j=0; j<userNum; j++) {
                 tempSum += Math.pow
-                        (tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos[j]].dist,2);
+                        (tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist,2);
             }
             tempAVG = tempSum/userNum;
             // 분산을 구했습니다. 이 정보들을 최소값과 비교하고 저장해주겠습니다.
             if(tempAVG < min) {
                 min = tempAVG;
-                resultX = stations[distance_sum[i].dest_pos[0]].lat;
-                resultY = stations[distance_sum[i].dest_pos[0]].lon;
-                System.out.println(resultX + " " + resultY);
+                resultX = stations[distance_sum[i].dest_pos].lat;
+                resultY = stations[distance_sum[i].dest_pos].lon;
+                //System.out.println(get_station_by_pos(resultX, resultY).Station_name);
+                // 일단 resultX와 resultY가 유효한 값들로 어느 정도 비교가 되는 것을 확인하였습니다.
             }
         }
+        System.out.println(get_station_by_pos(resultX, resultY).Station_name);
     }
 
     static Station_info checker(String tempName) {
@@ -297,6 +304,15 @@ public class Main {
         System.out.println(":: Invalid station name :: ");
         return null;
     }
+
+    static Station_info get_station_by_pos(float x, float y) {
+        for(Station_info temp : stations) {
+            if(temp.lat == x && temp.lon == y)
+                return temp;
+        }
+        return null;
+    }
+
     // getter
     public Station_info[] getStations() {
         return stations;
@@ -382,10 +398,10 @@ class Sum {
     // 유저의 리스트를 가지고 있어야 정렬 후 분산을 판단할 수 있습니다.
     // 정정 : 굳이 유저의 리스트가 아니더라도 int의 배열로 이를 똑같이 구현할 수 있습니다.
     int[] start_pos;
-    int[] dest_pos;
+    int dest_pos;
     // 정렬은 이 dist_sum을 기준으로 이루어집니다.
     float dist_sum;
-    public Sum(int[] start_pos, int[] dest_pos, float dist_sum) {
+    public Sum(int[] start_pos, int dest_pos, float dist_sum) {
         this.start_pos = start_pos;
         this.dist_sum = dist_sum;
         this.dest_pos = dest_pos;

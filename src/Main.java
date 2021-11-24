@@ -17,6 +17,11 @@ public class Main {
     static Station_distance[] station_distances;
     static Transfer_info[] transfer_infos;
     static Sum[] distance_sum;
+    static boolean Cafe;
+    static boolean Store;
+    static boolean Both;
+    static boolean Dept_store;
+    static boolean Cinema;
     public static void main(String[] args) throws Exception {
         // mysql 서버와 연결. 이 connection을 통해 쿼리 보내고 결과 받음
         //Class.forName("com.mysql.jdbc.Driver");
@@ -282,6 +287,7 @@ public class Main {
                 // k번째 유저의 도착지는 i
                 dest_index = i;
                 distSum += members[index][i].dist;
+                distSum += around_operator(i);
             }
             // i역에 대해서 모든 유저들의 가중치 총 합을 저장.
             distance_sum[i] = new Sum(start_indexes, dest_index, distSum);
@@ -319,6 +325,7 @@ public class Main {
                 tempSum += Math.pow
                         (Math.round(tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist
                         * 100) / 100.0,2);  //소수점 아래 둘째 자리까지만. 그렇지 않을 경우
+                // around_operator 호출 예정
             }
             tempAVG = tempSum/userNum;
             // 분산을 구했습니다. 이 정보들을 최소값과 비교하고 저장해주겠습니다.
@@ -326,14 +333,29 @@ public class Main {
                 min = tempAVG;
                 resultX = stations[distance_sum[i].dest_pos].lat;
                 resultY = stations[distance_sum[i].dest_pos].lon;
-                /*System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
+                System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
                        + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[0]].dist
                 + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[1]].dist
-                + " " + tempAVG) */;
+                + " " + tempAVG);
                 // 일단 resultX와 resultY가 유효한 값들로 어느 정도 비교가 되는 것을 확인하였습니다.
             }
         }
         System.out.println(get_station_by_pos(resultX, resultY).Station_name);
+    }
+    //체크된 옵션에 따라 가중치를 달리 할당해주는 메서드.
+    static float around_operator(int index) {
+        float around_value = 0;
+        if(Cafe)
+            around_value += stations[index].cafe * 0.1;
+        if(Store)
+            around_value += stations[index].store * 0.1;
+        if(!Cafe && !Store && Both)
+            around_value += stations[index].sum_around * 0.1;
+        if(Dept_store)
+            around_value += stations[index].dptstore ? 0 : INF;
+        if(Cinema)
+            around_value += stations[index].cinema ? 0 : INF;
+        return around_value;
     }
 
     static Station_info checker(String tempName) {
@@ -342,6 +364,7 @@ public class Main {
                 return temp;
             }
         }
+
         System.out.println(":: Invalid station name :: ");
         return null;
     }

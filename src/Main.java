@@ -84,7 +84,14 @@ public class Main {
             }
         }*/
         floydalgorithm(members, lines);
-
+        //floydalgorithm2(members, lines);
+       /*for(int i=0; i<281; i++) {
+            for(int k=0; k<281; k++) {
+                System.out.print(lines[i][k] + " ");
+                if(k == 90 || k == 180)
+                    System.out.println();
+            }
+        }*/
     }
     static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,
                           int i, int k, String[][] lines) throws SQLException{
@@ -187,6 +194,36 @@ public class Main {
         }
     }
 
+    static void floydalgorithm2 (Member[][] w, String[][] line_num) {
+        int maxnum = 281;
+        for(int k=0; k<maxnum; k++)
+        {
+            for(int i=0; i<maxnum; i++)
+            {
+                for(int j=0; j<maxnum; j++)
+                {
+                    if(w[i][j].dist > w[i][k].dist + w[k][j].dist && line_num[j][k].equals(line_num[i][j]))
+                        w[i][j].dist = w[i][k].dist + w[k][j].dist;
+                    else if(w[i][j].dist > w[i][k].dist + w[k][j].dist&& !line_num[j][k].equals(line_num[i][j])) {
+                        float tw=0;
+                        for (int p=0;p<90; p++) {
+                            if (line_num[i][k].equals(transfer_infos[p].Line_info) && line_num[k][j].equals(transfer_infos[p].Transfer_line) && stations[k].Station_name.equals(transfer_infos[p].Station_name))
+                                tw = transfer_infos[p].Transfer_value;
+                        }
+                        if (w[i][j].dist > w[i][k].dist + w[k][j].dist + tw && !line_num[j][k].equals(line_num[i][j])) {
+                            w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
+                            line_num[i][j]=line_num[k][j];
+                        }
+                    }
+                }
+            }
+        }
+        //printmatrix(maxnum, w, line_num);
+        //print(w);
+        // 이제 2차원 배열이 준비되었습니다.
+        calc_fair(w);
+    }
+
     static void floydalgorithm(Member[][] w, String[][] line_num) {
         int maxnum = 281;
         int tw = 0;
@@ -263,24 +300,25 @@ public class Main {
 
         // 그리고 (일단은) 상위 10개의 값 중에서 분산을 비교한다.
         // (값 - 값들의 평균)^2의 평균
+        // 메서드화 해야할 것 같다.
         float tempSum;
         float tempAVG;
         float min = INF;
         float resultX, resultY;
         resultX = resultY = 0;
-        for(int i=0; i<50; i++) {
+        for(int i=0; i<40; i++) {
             tempSum = 0;
             tempAVG = 0;
             for(int k=0; k<userNum; k++) {
                 tempSum += members[distance_sum[i].start_pos[k]][distance_sum[i].dest_pos].dist;
             }
             // 합을 구했으니 이를 바탕으로 평균을 구하고 나아가 분산을 구하겠습니다.
-            //
             tempAVG = tempSum / userNum;
             tempSum = 0;
             for(int j=0; j<userNum; j++) {
                 tempSum += Math.pow
-                        (tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist,2);
+                        (Math.round(tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist
+                        * 100) / 100.0,2);  //소수점 아래 둘째 자리까지만. 그렇지 않을 경우
             }
             tempAVG = tempSum/userNum;
             // 분산을 구했습니다. 이 정보들을 최소값과 비교하고 저장해주겠습니다.
@@ -288,7 +326,10 @@ public class Main {
                 min = tempAVG;
                 resultX = stations[distance_sum[i].dest_pos].lat;
                 resultY = stations[distance_sum[i].dest_pos].lon;
-                //System.out.println(get_station_by_pos(resultX, resultY).Station_name);
+                /*System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
+                       + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[0]].dist
+                + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[1]].dist
+                + " " + tempAVG) */;
                 // 일단 resultX와 resultY가 유효한 값들로 어느 정도 비교가 되는 것을 확인하였습니다.
             }
         }

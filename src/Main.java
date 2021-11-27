@@ -35,7 +35,7 @@ public class Main {
         Station_distance_setter(connection);
         Transfer_info_setter(connection);
         for(int i=0; i<userNum; i++) {
-            System.out.println("Please Enter the location of user " + i);
+            System.out.println("Please Enter the location of user " + (i+1));
             String tempName = br.readLine();
             //PreparedStatement statement = connection.prepareStatement("SELECT * FROM station_info WHERE Station_name = ?");
             //PreparedStatement statement = connection.prepareStatement("SELECT * AS size FROM station_info");
@@ -192,6 +192,7 @@ public class Main {
 
     static void floydalgorithm2 (Member[][] w, String[][] line_num) {
         int maxnum = 281;
+        boolean flag = false;
         for(int k=0; k<maxnum; k++)
         {
             for(int i=0; i<maxnum; i++)
@@ -207,6 +208,7 @@ public class Main {
                         // tw는 k에서 가져와야 한다.
                         float tw=0;
                         // 환승 테이블에서 정보를 찾는 배열
+                        flag = false;
                         for (int p=0;p<90; p++) {
                             /*if (line_num[i][k].equals(transfer_infos[p].Line_info) &&
                                     line_num[k][j].equals(transfer_infos[p].Transfer_line) &&
@@ -217,8 +219,13 @@ public class Main {
                             transfer_infos[p].Line_info.equals(stations[i].Line_Info)) {
                                 tw = transfer_infos[p].Transfer_value;
                                 w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
+                                flag = true;
                                 break;
                             }
+                        }
+                        if(!flag){
+                            if(w[i][j].dist > w[i][k].dist + w[k][j].dist)
+                                w[i][j].dist = w[i][k].dist + w[k][j].dist;
                         }
                         /*if (w[i][j].dist > w[i][k].dist + w[k][j].dist + tw &&
                                 !stations[i].Line_Info.equals(stations[j].Line_Info)) {
@@ -229,6 +236,7 @@ public class Main {
                         //w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
                         //System.out.print(stations[i].Station_name + " --> " + stations[j].Station_name + " " + tw);
                     }
+
                 }
             }
         }
@@ -277,8 +285,10 @@ public class Main {
                 start_indexes[k] = index;
                 // k번째 유저의 도착지는 i
                 dest_index = i;
+                // 경찰병원 값에 문제가 있는 것 같다. 일단 INF를 할당하겠다.
                 distSum += members[index][i].dist;
                 distSum += around_operator(i);
+                distSum = Math.round(distSum * 100 / 100.0);
             }
             // i역에 대해서 모든 유저들의 가중치 총 합을 저장.
             distance_sum[i] = new Sum(start_indexes, dest_index, distSum);
@@ -295,7 +305,7 @@ public class Main {
             }
         });
 
-        // 그리고 (일단은) 상위 10개의 값 중에서 분산을 비교한다.
+        // 그리고 (일단은) 상위 n개의 값 중에서 분산을 비교한다.
         // (값 - 값들의 평균)^2의 평균
         // 메서드화 해야할 것 같다.
         float tempSum;
@@ -303,23 +313,32 @@ public class Main {
         float min = INF;
         float resultX, resultY;
         resultX = resultY = 0;
-        for(int i=0; i<40; i++) {
+        // 기존 값 40
+       for(int i=0; i<80; i++) {
             tempSum = 0;
             tempAVG = 0;
             for(int k=0; k<userNum; k++) {
                 tempSum += members[distance_sum[i].start_pos[k]][distance_sum[i].dest_pos].dist;
             }
+            tempSum = Math.round(tempSum * 100 / 100.0);
             // 합을 구했으니 이를 바탕으로 평균을 구하고 나아가 분산을 구하겠습니다.
             tempAVG = tempSum / userNum;
             tempSum = 0;
             for(int j=0; j<userNum; j++) {
                 tempSum += Math.pow
-                        (Math.round(tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist
-                        * 100) / 100.0,2);  //소수점 아래 둘째 자리까지만. 그렇지 않을 경우
-                // around_operator 호출 예정
+                        (Math.round((tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist)
+                        * 100) / 100.0,2);  //소수점 아래 둘째 자리까지만.
+
+                //tempSum += tempAVG - members[distance_sum[i].start_pos[j]][distance_sum[i].dest_pos].dist * 100;
             }
             tempAVG = tempSum/userNum;
             // 분산을 구했습니다. 이 정보들을 최소값과 비교하고 저장해주겠습니다.
+            tempAVG = Math.round(tempAVG * 100 / 100.0);
+            /*System.out.println(get_station_by_pos(stations[distance_sum[i].dest_pos].lat,
+                    stations[distance_sum[i].dest_pos].lon).Station_name);*/
+           // 분산이 0이라는 것은 무언가 잘못됐음을 의미한다. 과감하게 제외하도록 하겠다.
+           if(tempAVG == 0)
+               continue;
             if(tempAVG < min) {
                 min = tempAVG;
                 resultX = stations[distance_sum[i].dest_pos].lat;
@@ -327,6 +346,7 @@ public class Main {
                 /*System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
                        + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[0]].dist
                 + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[1]].dist
+                + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[2]].dist
                 + " " + tempAVG);*/
                 // 일단 resultX와 resultY가 유효한 값들로 어느 정도 비교가 되는 것을 확인하였습니다.
             }

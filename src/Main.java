@@ -67,7 +67,7 @@ public class Main {
                 lines[i][k] = "INF";
             }
         }
-
+        Line_init(lines);
         for(int i=0; i<281; i++) {
             Pivot = stations[i];            //인덱스로 접근해서 역 정보 할당
             for(int k=0; k<281; k++) {
@@ -80,23 +80,13 @@ public class Main {
 
         /*for(int i=0; i<281; i++) {
             for(int k=0; k<281; k++) {
-               if(members[i][k].dist == INF)
-                    System.out.print("INF" + " ");
-                else
-                    System.out.print(members[i][k].dist + " ");
-                if(k == 70 || k == 140)
-                    System.out.println();
-            }
-        }*/
-        floydalgorithm(members, lines);
-        //floydalgorithm2(members, lines);
-       /*for(int i=0; i<281; i++) {
-            for(int k=0; k<281; k++) {
                 System.out.print(lines[i][k] + " ");
                 if(k == 90 || k == 180)
                     System.out.println();
             }
         }*/
+        //floydalgorithm(members, lines);
+        floydalgorithm2(members, lines);
     }
     static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,
                           int i, int k, String[][] lines) throws SQLException{
@@ -110,7 +100,7 @@ public class Main {
             if(Pivot.Station_name.equals(Changes.Station_name)) {
                 members[i][k].dist = 0;
                 members[k][i].dist = 0;
-                lines[i][k] = Pivot.Line_Info.substring(0,1);
+                //lines[i][k] = Pivot.Line_Info.substring(0,1);
                 break;
             }
             else if((From.equals(Pivot.Station_name) && To.equals(Changes.Station_name)) ||
@@ -119,13 +109,14 @@ public class Main {
                 members[i][k].dist = dist;
                 members[k][i].Line_info = Pivot.Line_Info;
                 members[k][i].dist = dist;
-                lines[i][k] = Pivot.Line_Info.substring(0,1);
+                //lines[i][k] = Pivot.Line_Info.substring(0,1);
                 break;
             }
         }
 
         //System.out.println(members[i][k].Line_info + " " + members[i][k].dist);
     }
+
 
     static void Station_Info_setter(Connection connection) throws SQLException {
         PreparedStatement TogetSize = connection.prepareStatement("SELECT count(*) FROM station_info");
@@ -209,22 +200,38 @@ public class Main {
                 {
                     if(w[i][j].dist > w[i][k].dist + w[k][j].dist && line_num[j][k].equals(line_num[i][j]))
                         w[i][j].dist = w[i][k].dist + w[k][j].dist;
-                    else if(w[i][j].dist > w[i][k].dist + w[k][j].dist&& !line_num[j][k].equals(line_num[i][j])) {
+                    else if(w[i][j].dist > w[i][k].dist + w[k][j].dist &&
+                            !line_num[j][k].equals(line_num[i][j])) {
+                        //System.out.print(stations[i].Station_name + " --> " + stations[j].Station_name + " : ");
+                        // 환승 지점은 k이다.
+                        // tw는 k에서 가져와야 한다.
                         float tw=0;
+                        // 환승 테이블에서 정보를 찾는 배열
                         for (int p=0;p<90; p++) {
-                            if (line_num[i][k].equals(transfer_infos[p].Line_info) && line_num[k][j].equals(transfer_infos[p].Transfer_line) && stations[k].Station_name.equals(transfer_infos[p].Station_name))
+                            /*if (line_num[i][k].equals(transfer_infos[p].Line_info) &&
+                                    line_num[k][j].equals(transfer_infos[p].Transfer_line) &&
+                                    stations[k].Station_name.equals(transfer_infos[p].Station_name))
+                                tw = transfer_infos[p].Transfer_value;*/
+                            if(transfer_infos[p].Station_name.equals(stations[k].Station_name)
+                            && transfer_infos[p].Transfer_line.equals(stations[j].Line_Info) &&
+                            transfer_infos[p].Line_info.equals(stations[i].Line_Info)) {
                                 tw = transfer_infos[p].Transfer_value;
+                                w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
+                                break;
+                            }
                         }
-                        if (w[i][j].dist > w[i][k].dist + w[k][j].dist + tw && !line_num[j][k].equals(line_num[i][j])) {
+                        /*if (w[i][j].dist > w[i][k].dist + w[k][j].dist + tw &&
+                                !stations[i].Line_Info.equals(stations[j].Line_Info)) {
                             w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
-                            line_num[i][j]=line_num[k][j];
-                        }
+                            System.out.println(tw + " " + stations[i].Station_name + " " + stations[j].Station_name);
+                            //line_num[i][j] = line_num[k][j];
+                        }*/
+                        //w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
+                        //System.out.print(stations[i].Station_name + " --> " + stations[j].Station_name + " " + tw);
                     }
                 }
             }
         }
-        //printmatrix(maxnum, w, line_num);
-        //print(w);
         // 이제 2차원 배열이 준비되었습니다.
         calc_fair(w);
     }
@@ -245,32 +252,16 @@ public class Main {
                 }
             }
         }
-        //printmatrix(maxnum, w, line_num);
-        //print(w);
-        // 이제 2차원 배열이 준비되었습니다.
         calc_fair(w);
     }
-    static void print(Member[][] w) {
-        for(int i=0; i<281; i++) {
-            for(int k=0; k<281; k++) {
-                System.out.println(stations[i].Station_name + " -> " + stations[k].Station_name +
-                        " : " + w[i][k].dist);
+
+    static void Line_init(String[][] line_num) {
+        for(int x=0; x<281; x++) {
+            for(int y=0; y<281; y++) {
+                line_num[x][y] = stations[y].Line_Info;
             }
         }
     }
-    /*static void printmatrix(int maxnum, Member[][] w, String[][] line_num) {
-        for(int i=0; i<maxnum; i++) {
-            for(int j=0; j<maxnum; j++) {
-                if(w[i][j].dist == INF) {
-                    System.out.printf(" INF");
-                    continue;
-                }
-                else
-                    System.out.printf(" %3.1f",w[i][j].dist);
-            }
-            System.out.println();
-        }
-    }*/
 
     static void calc_fair(Member[][] members) {
         int index = 0;
@@ -333,10 +324,10 @@ public class Main {
                 min = tempAVG;
                 resultX = stations[distance_sum[i].dest_pos].lat;
                 resultY = stations[distance_sum[i].dest_pos].lon;
-                System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
+                /*System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
                        + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[0]].dist
                 + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[1]].dist
-                + " " + tempAVG);
+                + " " + tempAVG);*/
                 // 일단 resultX와 resultY가 유효한 값들로 어느 정도 비교가 되는 것을 확인하였습니다.
             }
         }
@@ -439,9 +430,7 @@ class Transfer_info {
     }
 }
 
-// user 클래스. 처음 출발하는 역 노드, 누적 거리값, 여태 지나온 역들을 담을 queue를 가진다.
 class user {
-    // 일단은 최초에 찾은 하나의 역만을 갖는다. 후에 문제가 생기면 리스트로 바꾸던가 해야겠다.
     Station_info Current_station;
     public user(Station_info Current_station) {
         this.Current_station = Current_station;

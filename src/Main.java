@@ -77,16 +77,10 @@ public class Main {
                 Find_dist(statement.executeQuery(), members, Pivot, Changes,i, k, lines);
             }
         }
-
-        /*for(int i=0; i<281; i++) {
-            for(int k=0; k<281; k++) {
-                System.out.print(lines[i][k] + " ");
-                if(k == 90 || k == 180)
-                    System.out.println();
-            }
-        }*/
-        //floydalgorithm(members, lines);
-        floydalgorithm2(members, lines);
+        //floydalgorithm은 환승을 고려하지 않습니다.
+        floydalgorithm(members, lines);
+        //floydalgorithm2는 환승을 고려합니다.
+        //floydalgorithm2(members, lines);
     }
     static void Find_dist(ResultSet RS, Member[][] members, Station_info Pivot, Station_info Changes,
                           int i, int k, String[][] lines) throws SQLException{
@@ -100,7 +94,6 @@ public class Main {
             if(Pivot.Station_name.equals(Changes.Station_name)) {
                 members[i][k].dist = 0;
                 members[k][i].dist = 0;
-                //lines[i][k] = Pivot.Line_Info.substring(0,1);
                 break;
             }
             else if((From.equals(Pivot.Station_name) && To.equals(Changes.Station_name)) ||
@@ -109,12 +102,10 @@ public class Main {
                 members[i][k].dist = dist;
                 members[k][i].Line_info = Pivot.Line_Info;
                 members[k][i].dist = dist;
-                //lines[i][k] = Pivot.Line_Info.substring(0,1);
                 break;
             }
         }
 
-        //System.out.println(members[i][k].Line_info + " " + members[i][k].dist);
     }
 
 
@@ -210,10 +201,6 @@ public class Main {
                         // 환승 테이블에서 정보를 찾는 배열
                         flag = false;
                         for (int p=0;p<90; p++) {
-                            /*if (line_num[i][k].equals(transfer_infos[p].Line_info) &&
-                                    line_num[k][j].equals(transfer_infos[p].Transfer_line) &&
-                                    stations[k].Station_name.equals(transfer_infos[p].Station_name))
-                                tw = transfer_infos[p].Transfer_value;*/
                             if(transfer_infos[p].Station_name.equals(stations[k].Station_name)
                             && transfer_infos[p].Transfer_line.equals(stations[j].Line_Info) &&
                             transfer_infos[p].Line_info.equals(stations[i].Line_Info)) {
@@ -227,16 +214,7 @@ public class Main {
                             if(w[i][j].dist > w[i][k].dist + w[k][j].dist)
                                 w[i][j].dist = w[i][k].dist + w[k][j].dist;
                         }
-                        /*if (w[i][j].dist > w[i][k].dist + w[k][j].dist + tw &&
-                                !stations[i].Line_Info.equals(stations[j].Line_Info)) {
-                            w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
-                            System.out.println(tw + " " + stations[i].Station_name + " " + stations[j].Station_name);
-                            //line_num[i][j] = line_num[k][j];
-                        }*/
-                        //w[i][j].dist = w[i][k].dist + w[k][j].dist + tw;
-                        //System.out.print(stations[i].Station_name + " --> " + stations[j].Station_name + " " + tw);
                     }
-
                 }
             }
         }
@@ -285,7 +263,6 @@ public class Main {
                 start_indexes[k] = index;
                 // k번째 유저의 도착지는 i
                 dest_index = i;
-                // 경찰병원 값에 문제가 있는 것 같다. 일단 INF를 할당하겠다.
                 distSum += members[index][i].dist;
                 distSum += around_operator(i);
                 distSum = Math.round(distSum * 100 / 100.0);
@@ -307,13 +284,12 @@ public class Main {
 
         // 그리고 (일단은) 상위 n개의 값 중에서 분산을 비교한다.
         // (값 - 값들의 평균)^2의 평균
-        // 메서드화 해야할 것 같다.
         float tempSum;
         float tempAVG;
         float min = INF;
         float resultX, resultY;
         resultX = resultY = 0;
-        // 기존 값 40
+        // 기존 값 80
        for(int i=0; i<80; i++) {
             tempSum = 0;
             tempAVG = 0;
@@ -334,8 +310,6 @@ public class Main {
             tempAVG = tempSum/userNum;
             // 분산을 구했습니다. 이 정보들을 최소값과 비교하고 저장해주겠습니다.
             tempAVG = Math.round(tempAVG * 100 / 100.0);
-            /*System.out.println(get_station_by_pos(stations[distance_sum[i].dest_pos].lat,
-                    stations[distance_sum[i].dest_pos].lon).Station_name);*/
            // 분산이 0이라는 것은 무언가 잘못됐음을 의미한다. 과감하게 제외하도록 하겠다.
            if(tempAVG == 0)
                continue;
@@ -343,12 +317,6 @@ public class Main {
                 min = tempAVG;
                 resultX = stations[distance_sum[i].dest_pos].lat;
                 resultY = stations[distance_sum[i].dest_pos].lon;
-                /*System.out.println(get_station_by_pos(resultX, resultY).Station_name + " "
-                       + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[0]].dist
-                + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[1]].dist
-                + " " + members[get_station_by_pos(resultX, resultY).station_num][distance_sum[i].start_pos[2]].dist
-                + " " + tempAVG);*/
-                // 일단 resultX와 resultY가 유효한 값들로 어느 정도 비교가 되는 것을 확인하였습니다.
             }
         }
         System.out.println(get_station_by_pos(resultX, resultY).Station_name);
